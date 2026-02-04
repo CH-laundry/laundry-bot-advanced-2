@@ -1,0 +1,39 @@
+{
+  "storeName": "範例洗衣店",
+  "phone": "02-12345678",
+  "address": "台北市信義區信義路五段7號",
+  "businessHours": "週一至週日 09:00-21:00",
+  "lineOfficialUrl": "https://line.me/R/ti/p/@xxxxx",
+  "pricing": {
+    "西裝": {
+      "price": 200,
+      "days": 3,
+      "description": "西裝外套乾洗"
+    },
+    "襯衫": {
+      "price": 100,
+      "days": 2,
+      "description": "襯衫水洗燙整"
+    },
+    "羽絨衣": {
+      "price": 350,
+      "days": 5,
+      "description": "羽絨外套專業清洗"
+    },
+    "大衣": {
+      "price": 250,
+      "days": 4,
+      "description": "大衣乾洗"
+    },
+    "毛衣": {
+      "price": 150,
+      "days": 3,
+      "description": "毛衣手洗"
+    }
+  },
+  "specialRules": [
+    "週日公休",
+    "羽絨衣冬季(11-2月)加收50元",
+    "急件加收50%費用"
+  ]
+}
