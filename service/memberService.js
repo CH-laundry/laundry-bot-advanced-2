@@ -29,23 +29,29 @@ async function isUserExists(userId) {
     const auth = await getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
     
+    console.log(`🔍 正在查詢用戶: ${userId}`);
+    
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: '會員資料!C:C', // C 欄是 LINE User ID
+      range: '會員資料!C:C', // C 欄是客戶ID
     });
     
     const rows = response.data.values || [];
+    console.log(`📊 會員資料表共有 ${rows.length} 行`);
     
     // 檢查是否有這個 User ID（跳過標題列）
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][0] === userId) {
+        console.log(`✅ 用戶已存在於第 ${i + 1} 行`);
         return true;
       }
     }
     
+    console.log(`❌ 用戶不存在`);
     return false;
   } catch (error) {
     console.error('❌ 檢查用戶是否存在時出錯:', error.message);
+    console.error('錯誤詳情:', error);
     return false;
   }
 }
@@ -61,16 +67,18 @@ async function addUnboundMember(userId) {
     const now = new Date();
     const timestamp = now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
     
+    console.log(`📝 準備新增會員: ${userId}`);
+    
     const values = [[
       '',           // A: 會員編號（空白）
       '',           // B: 客戶姓名（空白）
-      userId,       // C: LINE User ID
-      '',           // D: 手機號碼（空白）
+      userId,       // C: 客戶ID
+      '',           // D: 客戶電話（空白）
       timestamp,    // E: 綁定日期
       '未綁定'      // F: 狀態
     ]];
     
-    await sheets.spreadsheets.values.append({
+    const result = await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: '會員資料!A:F',
       valueInputOption: 'USER_ENTERED',
@@ -79,10 +87,12 @@ async function addUnboundMember(userId) {
     });
     
     console.log(`✅ 已記錄未綁定會員: ${userId}`);
+    console.log(`📊 更新範圍: ${result.data.updates.updatedRange}`);
     return true;
     
   } catch (error) {
     console.error('❌ 新增未綁定會員時出錯:', error.message);
+    console.error('錯誤詳情:', error);
     return false;
   }
 }
@@ -98,6 +108,8 @@ async function logConversation(userId, userMessage, aiReply) {
     const now = new Date();
     const timestamp = now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
     
+    console.log(`💬 準備記錄對話: ${userId}`);
+    
     // 查詢該用戶的會員編號和姓名
     const memberInfo = await getMemberInfo(userId);
     
@@ -105,7 +117,7 @@ async function logConversation(userId, userMessage, aiReply) {
       timestamp,                    // A: 時間
       memberInfo.memberId || '',    // B: 會員編號
       memberInfo.name || '',        // C: 客戶姓名
-      userId,                       // D: LINE User ID
+      userId,                       // D: 客戶ID
       userMessage,                  // E: 客戶訊息
       aiReply                       // F: AI回覆
     ]];
@@ -122,6 +134,7 @@ async function logConversation(userId, userMessage, aiReply) {
     
   } catch (error) {
     console.error('❌ 記錄對話時出錯:', error.message);
+    console.error('錯誤詳情:', error);
   }
 }
 
@@ -140,12 +153,12 @@ async function getMemberInfo(userId) {
     
     const rows = response.data.values || [];
     
-    // 尋找匹配的 User ID
+    // 尋找匹配的 User ID (C欄是客戶ID)
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][2] === userId) { // C 欄是 User ID
+      if (rows[i][2] === userId) { // C 欄是客戶ID
         return {
           memberId: rows[i][0] || '',  // A 欄是會員編號
-          name: rows[i][1] || ''        // B 欄是姓名
+          name: rows[i][1] || ''        // B 欄是客戶姓名
         };
       }
     }
