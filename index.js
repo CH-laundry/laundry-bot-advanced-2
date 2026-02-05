@@ -2,7 +2,6 @@
 // 洗衣店 AI 客服系統 - 進階版
 // 新增：自動記錄首次對話用戶 + 對話記錄
 // ====================================
-
 require('dotenv').config();
 const express = require('express');
 const { Client } = require('@line/bot-sdk');
@@ -44,7 +43,7 @@ app.get('/health', (req, res) => {
 app.post('/webhook', async (req, res) => {
   // 先回覆 LINE Server 200 OK
   res.status(200).end();
-
+  
   try {
     const events = req.body.events || [];
     
@@ -53,44 +52,51 @@ app.post('/webhook', async (req, res) => {
       if (event.type !== 'message' || event.message.type !== 'text') {
         continue;
       }
-
+      
       const userId = event.source.userId;
       const userMessage = event.message.text.trim();
-
       console.log(`📩 收到訊息: ${userMessage} (來自 ${userId})`);
-
+      
       try {
         // ====== 新功能：檢查是否為首次對話用戶 ======
+        console.log(`🔍 檢查用戶是否存在: ${userId}`);
         const userExists = await memberService.isUserExists(userId);
         
         if (!userExists) {
           console.log(`🆕 偵測到新用戶: ${userId}`);
           await memberService.addUnboundMember(userId);
           console.log(`✅ 已記錄新用戶到 Google Sheets`);
+        } else {
+          console.log(`✅ 用戶已存在: ${userId}`);
         }
         
         // ====== 呼叫 Claude AI 處理訊息 ======
+        console.log(`🤖 正在呼叫 AI 處理訊息...`);
         const aiResponse = await claudeAI.handleTextMessage(userMessage, userId);
-
+        
         if (aiResponse) {
           // 回覆給用戶
           await client.pushMessage(userId, {
             type: 'text',
             text: aiResponse
           });
-          console.log(`✅ AI 已回覆: ${userId}`);
+          console.log(`✅ AI 已回覆給用戶: ${userId}`);
           
           // ====== 新功能：記錄對話到 Google Sheets ======
+          console.log(`💾 記錄對話到 Google Sheets...`);
           await memberService.logConversation(userId, userMessage, aiResponse);
+          console.log(`✅ 對話已記錄`);
         } else {
           console.log(`🔇 AI 判斷為無關問題,不回覆`);
         }
       } catch (aiError) {
         console.error(`❌ AI 處理失敗:`, aiError.message);
+        console.error(aiError.stack);
       }
     }
   } catch (error) {
     console.error(`❌ Webhook 處理失敗:`, error.message);
+    console.error(error.stack);
   }
 });
 
