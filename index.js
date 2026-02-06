@@ -1,6 +1,6 @@
 // ====================================
 // 洗衣店 AI 客服系統 - 進階版
-// 新增：自動記錄首次對話用戶 + 對話記錄
+// 新增:自動記錄首次對話用戶 + 對話記錄
 // ====================================
 require('dotenv').config();
 const express = require('express');
@@ -8,8 +8,8 @@ const { Client } = require('@line/bot-sdk');
 
 // ====== 載入模組 ======
 console.log('🤖 正在載入 AI 客服模組...');
-const claudeAI = require('./services/claudeAI');
-const memberService = require('./services/memberService');
+const claudeAI = require('./service/claudeAI');
+const memberService = require('./service/memberService');
 console.log('✅ AI 客服模組已載入');
 console.log('✅ 會員服務模組已載入');
 
@@ -58,7 +58,7 @@ app.post('/webhook', async (req, res) => {
       console.log(`📩 收到訊息: ${userMessage} (來自 ${userId})`);
       
       try {
-        // ====== 新功能：檢查是否為首次對話用戶 ======
+        // ====== 新功能:檢查是否為首次對話用戶 ======
         console.log(`🔍 檢查用戶是否存在: ${userId}`);
         const userExists = await memberService.isUserExists(userId);
         
@@ -82,7 +82,7 @@ app.post('/webhook', async (req, res) => {
           });
           console.log(`✅ AI 已回覆給用戶: ${userId}`);
           
-          // ====== 新功能：記錄對話到 Google Sheets ======
+          // ====== 新功能:記錄對話到 Google Sheets ======
           console.log(`💾 記錄對話到 Google Sheets...`);
           await memberService.logConversation(userId, userMessage, aiResponse);
           console.log(`✅ 對話已記錄`);
