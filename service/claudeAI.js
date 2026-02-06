@@ -367,7 +367,7 @@ async function logToGoogleSheets(userId, userMessage, aiReply, questionType = ''
     
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.LEARNING_SHEET_ID,
-      range: '對話記錄!A:L',
+      range: '對話紀錄!A:L',
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [[
