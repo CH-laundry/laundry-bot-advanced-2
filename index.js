@@ -1,54 +1,27 @@
-// ====================================
-// 洗衣店 AI 客服系統 - 進階版
-// 新增:自動記錄首次對話用戶 + 對話記錄
-// ====================================
 require('dotenv').config();
 const express = require('express');
-const { Client } = require('@line/bot-sdk');
-
-// ====== 載入模組 ======
-console.log('🤖 正在載入 AI 客服模組...');
+const line = require('@line/bot-sdk');
 const claudeAI = require('./service/claudeAI');
 const memberService = require('./service/memberService');
-console.log('✅ AI 客服模組已載入');
-console.log('✅ 會員服務模組已載入');
 
-// ====== Express 設定 ======
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ====== LINE Bot 設定 ======
-const client = new Client({
+// LINE Bot 設定
+const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET,
-});
+  channelSecret: process.env.LINE_CHANNEL_SECRET
+};
 
-// ====== 健康檢查 ======
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'AI 洗衣客服 - 進階版 v2.0',
-    features: [
-      '✅ AI 客服',
-      '✅ 自動記錄新用戶',
-      '✅ 對話記錄',
-      '✅ 會員管理'
-    ]
-  });
-});
+const client = new line.Client(config);
 
-// ====== LINE Webhook ======
-app.post('/webhook', async (req, res) => {
-  // 先回覆 LINE Server 200 OK
+// Webhook endpoint
+app.post('/webhook', line.middleware(config), async (req, res) => {
   res.status(200).end();
   
   try {
     const events = req.body.events || [];
     
     for (const event of events) {
-      // 只處理文字訊息
       if (event.type !== 'message' || event.message.type !== 'text') {
         continue;
       }
@@ -58,31 +31,40 @@ app.post('/webhook', async (req, res) => {
       console.log(`📩 收到訊息: ${userMessage} (來自 ${userId})`);
       
       try {
-        // ====== 新功能:檢查是否為首次對話用戶 ======
+        // ✅ 抓取用戶的 LINE 顯示名稱
+        let displayName = '';
+        try {
+          const profile = await client.getProfile(userId);
+          displayName = profile.displayName || '';
+          console.log(`👤 用戶名稱: ${displayName}`);
+        } catch (profileError) {
+          console.log(`⚠️ 無法取得用戶資料: ${profileError.message}`);
+        }
+        
+        // 檢查是否為首次對話用戶
         console.log(`🔍 檢查用戶是否存在: ${userId}`);
         const userExists = await memberService.isUserExists(userId);
         
         if (!userExists) {
-          console.log(`🆕 偵測到新用戶: ${userId}`);
-          await memberService.addUnboundMember(userId);
+          console.log(`🆕 偵測到新用戶: ${userId} (${displayName})`);
+          await memberService.addUnboundMember(userId, displayName);
           console.log(`✅ 已記錄新用戶到 Google Sheets`);
         } else {
           console.log(`✅ 用戶已存在: ${userId}`);
         }
         
-        // ====== 呼叫 Claude AI 處理訊息 ======
+        // 呼叫 Claude AI 處理訊息
         console.log(`🤖 正在呼叫 AI 處理訊息...`);
         const aiResponse = await claudeAI.handleTextMessage(userMessage, userId);
         
         if (aiResponse) {
-          // 回覆給用戶
           await client.pushMessage(userId, {
             type: 'text',
             text: aiResponse
           });
           console.log(`✅ AI 已回覆給用戶: ${userId}`);
           
-          // ====== 新功能:記錄對話到 Google Sheets ======
+          // 記錄對話到 Google Sheets
           console.log(`💾 記錄對話到 Google Sheets...`);
           await memberService.logConversation(userId, userMessage, aiResponse);
           console.log(`✅ 對話已記錄`);
@@ -100,12 +82,12 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// ====== 啟動伺服器 ======
+// 健康檢查
+app.get('/', (req, res) => {
+  res.send('LINE Bot is running!');
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ 伺服器啟動成功!`);
-  console.log(`📡 Port: ${PORT}`);
-  console.log(`🤖 AI 客服系統 v2.0 運行中...`);
-  console.log(`📊 會員管理功能已啟用`);
-  console.log(`💬 對話記錄功能已啟用`);
+  console.log(`✅ Server is running on port ${PORT}`);
 });
